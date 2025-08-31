@@ -1,191 +1,1209 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#3498db">
-    <title>El Campeón - Punto de Venta</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#3498db">
-    <meta name="description" content="Sistema de punto de venta para El Campeón">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="El Campeón">
-    <meta name="application-name" content="El Campeón">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="description" content="Sistema de control de gastos para casas en arriendo">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Control de Gastos - Casas en Arriendo</title>
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --secondary: #6b7280;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --light-bg: #f9fafb;
+      --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --card-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .card {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-hover);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      font-weight: 500;
+      padding: 0.5rem 1.25rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background-color: #dc2626;
+    }
+
+    .input-field {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+      outline: none;
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-paid {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .status-pending {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 0.75rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    th {
+      background-color: #f9fafb;
+      color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-align: left;
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: white;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: #f9fafb;
+    }
+
+    .section-title {
+      color: #111827;
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      padding-bottom: 0.5rem;
+    }
+
+    .section-title:after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 3rem;
+      height: 3px;
+      background: var(--primary);
+      border-radius: 3px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s ease;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--card-hover);
+    }
+
+    .summary-title {
+      color: #6b7280;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
-<body>
-    <header>
-        <h1>Control de Caja</h1>
-        <p>Hoy: <span id="fecha-actual"></span></p>
-    </header>
-
-    <main>
-        <section id="productos-section" class="card">
-            <h2>Seleccionar Producto</h2>
-            <div id="categorias-container">
-                </div>
-            <button id="agregar-producto-btn" class="btn btn-secondary">Agregar Nuevo Producto</button>
-        </section>
-
-        <section id="resumen-section" class="card">
-            <h2>Resumen del Día</h2>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span>Efectivo:</span>
-                    <span id="total-efectivo" class="valor">$0</span>
-                </div>
-                <div class="stat-item">
-                    <span>Transferencia:</span>
-                    <span id="total-transferencia" class="valor">$0</span>
-                </div>
-            </div>
-            <div class="button-group">
-                <button id="ver-total-detalle" class="btn btn-primary">Ver Total y Detalle</button>
-                <button id="reiniciar-dia" class="btn btn-danger">Cerrar y Reiniciar Caja</button>
-            </div>
-            <p class="note">Al reiniciar, los totales se guardan en el historial y se borran para el día siguiente.</p>
-        </section>
-    </main>
-
-    <div class="modal" id="modal-pago">
-        <div class="modal-content">
-            <span class="close-button" data-modal="modal-pago">&times;</span>
-            <h3>Total a Pagar: <span id="monto-modal" class="valor-modal">$0</span></h3>
-            <p>Seleccione el método de pago:</p>
-            <div class="modal-buttons">
-                <button id="pago-efectivo" class="btn btn-primary">Pago en Efectivo</button>
-                <button id="pago-transferencia" class="btn btn-secondary">Pago por Transferencia</button>
-                <button id="pago-combinado" class="btn btn-tertiary">Pago Combinado</button>
-                <button id="cancelar-pago" class="btn btn-danger">Cancelar</button>
-            </div>
-            <div id="pago-combinado-form" style="display: none; margin-top: 15px;">
-                <div class="form-group">
-                    <label for="monto-efectivo">Monto en Efectivo:</label>
-                    <input type="number" id="monto-efectivo" class="form-control" min="0" step="100">
-                </div>
-                <div class="form-group">
-                    <label for="monto-transferencia">Monto por Transferencia:</label>
-                    <input type="number" id="monto-transferencia" class="form-control" min="0" step="100">
-                </div>
-                <div class="form-group">
-                    <button id="confirmar-combinado" class="btn btn-primary">Confirmar Pago</button>
-                    <button id="cancelar-combinado" class="btn btn-secondary">Cancelar</button>
-                </div>
-            </div>
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans">
+  <header class="bg-gray-800 text-white p-4 relative">
+    <h1 class="text-2xl font-bold">Control de Gastos - Casas en Arriendo</h1>
+    <button id="installButton" class="hidden absolute right-4 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+      Instalar App
+    </button>
+  </header>
+  <main class="container mx-auto p-4 flex-grow">
+    <section class="mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Ingresar Costos Fijos</h2>
+        <div id="currentMonthDisplay" class="text-lg font-medium text-gray-700"></div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow mb-6">
+        <h3 class="font-medium mb-2">Agua</h3>
+        <div id="waterFixedItems" class="space-y-2 mb-4"></div>
+        <div class="flex space-x-2">
+          <input type="text" id="waterItemName" placeholder="Nombre del ítem" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+          <input type="number" id="waterItemAmount" step="0.01" min="0" placeholder="Monto ($)" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+          <button id="addWaterItemButton" class="mt-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Añadir</button>
         </div>
-    </div>
-
-    <div class="modal" id="modal-detalle">
-        <div class="modal-content" id="reporte-pdf-content">
-            <span class="close-button" data-modal="modal-detalle">&times;</span>
-            <h3>Resumen de Ventas</h3>
-            <div class="stats-grid-modal">
-                <div class="stat-item">
-                    <span>Total Generado:</span>
-                    <span id="total-generado" class="valor-modal">$0</span>
-                </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="font-medium mb-2">Electricidad</h3>
+        <div id="electricityFixedItems" class="space-y-2 mb-4"></div>
+        <div class="flex space-x-2">
+          <input type="text" id="electricityItemName" placeholder="Nombre del ítem" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+          <input type="number" id="electricityItemAmount" step="0.01" min="0" placeholder="Monto ($)" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+          <button id="addElectricityItemButton" class="mt-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Añadir</button>
+        </div>
+        <p id="fixedCostsStatus" class="mt-2 text-sm text-gray-600"></p>
+      </div>
+    </section>
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold mb-4">Registrar Nuevos Consumos</h2>
+      <div class="bg-white p-6 rounded-lg shadow space-y-6">
+        <div class="border-b pb-4 mb-4">
+          <h3 class="text-lg font-medium mb-3">Agua</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="font-medium mb-2">Casa 1</h4>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Lectura Anterior (m³)</label>
+                <input type="number" id="prevWater1" step="0.01" min="0" class="mt-1 mb-2 block w-full border-gray-300 rounded-md shadow-sm">
+                <label class="block text-sm font-medium text-gray-700">Lectura Actual (m³)</label>
+                <input type="number" id="water1" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+              </div>
             </div>
-            <h4>Detalle por Producto</h4>
-            <ul id="detalle-lista">
-                </ul>
-            <p class="note">Mostrando ventas actuales del día.</p>
+            <div>
+              <h4 class="font-medium mb-2">Casa 2</h4>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Lectura Anterior (m³)</label>
+                <input type="number" id="prevWater2" step="0.01" min="0" class="mt-1 mb-2 block w-full border-gray-300 rounded-md shadow-sm">
+                <label class="block text-sm font-medium text-gray-700">Lectura Actual (m³)</label>
+                <input type="number" id="water2" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+              </div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700">Total Factura Agua ($)</label>
+            <input type="number" id="totalWaterBill" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+          </div>
         </div>
-        <div class="modal-footer">
-            <button id="generar-pdf-btn" class="btn btn-primary">Descargar Reporte y Reiniciar</button>
+        <div>
+          <h3 class="text-lg font-medium mb-3">Electricidad</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="font-medium mb-2">Casa 1</h4>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Lectura Anterior (kWh)</label>
+                <input type="number" id="prevElectricity1" step="0.01" min="0" class="mt-1 mb-2 block w-full border-gray-300 rounded-md shadow-sm">
+                <label class="block text-sm font-medium text-gray-700">Lectura Actual (kWh)</label>
+                <input type="number" id="electricity1" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+              </div>
+            </div>
+            <div>
+              <h4 class="font-medium mb-2">Casa 2</h4>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Lectura Anterior (kWh)</label>
+                <input type="number" id="prevElectricity2" step="0.01" min="0" class="mt-1 mb-2 block w-full border-gray-300 rounded-md shadow-sm">
+                <label class="block text-sm font-medium text-gray-700">Lectura Actual (kWh)</label>
+                <input type="number" id="electricity2" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+              </div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700">Total Factura Electricidad ($)</label>
+            <input type="number" id="totalElectricityBill" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+          </div>
         </div>
-    </div>
-
-    <div class="modal" id="modal-agregar-producto">
-        <div class="modal-content">
-            <span class="close-button" data-modal="modal-agregar-producto">&times;</span>
-            <h3>Nuevo Producto</h3>
-            <form id="form-nuevo-producto">
-                <div class="form-group">
-                    <label for="nombre-producto">Nombre:</label>
-                    <input type="text" id="nombre-producto" required>
-                </div>
-                <div class="form-group">
-                    <label for="precio-producto">Precio:</label>
-                    <input type="number" id="precio-producto" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label for="categoria-producto">Categoría:</label>
-                    <select id="categoria-producto" required></select>
-                </div>
-                <button type="submit" class="btn btn-primary">Guardar Producto</button>
-            </form>
+        <button id="saveButton" class="mt-6 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full">Guardar Registro</button>
+      </div>
+    </section>
+    <section class="mt-10">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Historial de Gastos</h2>
         </div>
-    </div>
+        <div class="flex flex-wrap gap-3 w-full md:w-auto">
+          <button id="exportPdf" class="btn-primary flex items-center justify-center w-full md:w-auto px-4 py-2">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Exportar PDF
+          </button>
+          <div class="relative w-full md:w-64">
+            <input type="text" id="searchExpenses" placeholder="Buscar en historial..." class="input-field w-full pl-10 pr-4 py-2">
+            <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="summary-card">
+          <div class="summary-title">Gasto Total</div>
+          <div id="totalExpense" class="summary-value">$0</div>
+          <div class="text-xs text-green-600 mt-1">+2.5% vs mes anterior</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-title">Promedio Mensual</div>
+          <div id="avgExpense" class="summary-value">$0</div>
+          <div class="text-xs text-blue-600 mt-1">Últimos 6 meses</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-title">Gastos este Mes</div>
+          <div id="currentMonthExpense" class="summary-value">$0</div>
+          <div class="text-xs text-gray-500 mt-1">Actualizado hace 5 min</div>
+        </div>
+      </div>
+      
+      <div class="card overflow-hidden">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Detalle</th>
+                <th class="text-right">Casa 1</th>
+                <th class="text-right">Casa 2</th>
+                <th class="text-right">Total</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="expensesList" class="divide-y divide-gray-100">
+              <!-- Expenses will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+          <div class="text-sm text-gray-500">
+            Mostrando <span id="showingCount">1-10</span> de <span id="totalCount">0</span> registros
+          </div>
+          <div class="flex space-x-2">
+            <button class="px-3 py-1 border rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              Anterior
+            </button>
+            <button class="px-3 py-1 border rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    let db;
+    let isUpdating = false;
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script>
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                if ('caches' in window) {
-                    caches.keys().then(cacheNames => {
-                        cacheNames.forEach(cacheName => {
-                            if (cacheName.startsWith('el-campeon-')) {
-                                caches.delete(cacheName);
-                            }
-                        });
-                    });
-                }
-
-                navigator.serviceWorker.register('./sw.js', { scope: './' })
-                    .then(registration => {
-                        console.log('ServiceWorker registrado con éxito:', registration.scope);
-                        
-                        if (registration.waiting) {
-                            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                        }
-                        
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('Nueva versión disponible. Actualizando...');
-                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                                }
-                            });
-                        });
-                        
-                        setInterval(() => {
-                            registration.update().catch(console.error);
-                        }, 60 * 60 * 1000);
-                    })
-                    .catch(error => {
-                        console.error('Error al registrar el ServiceWorker:', error);
-                    });
-
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    console.log('Nuevo Service Worker tomando el control');
-                    window.location.reload();
-                });
-            }
+    // Initialize the database
+    async function initDatabase() {
+      try {
+        if (window.db) {
+          try {
+            await window.db.close();
+            console.log('Previous database connection closed');
+          } catch (err) {
+            console.log('No previous database to close or error:', err);
+          }
         }
+        
+        db = new Dexie("RentalExpensesDB");
+        
+        // Define database schema
+        db.version(1).stores({
+          expenses: '++id, date',
+          fixedCosts: '++id, date',
+          lastReadings: 'id'
+        });
+        
+        // Initialize with default data if needed
+        db.on('populate', async () => {
+          try {
+            await db.lastReadings.put({
+              id: 1,
+              water1: 0,
+              water2: 0,
+              electricity1: 0,
+              electricity2: 0
+            });
+            
+            // Initialize empty fixed costs for current month
+            const yearMonth = new Date().toISOString().slice(0, 7);
+            await db.fixedCosts.add({
+              date: yearMonth,
+              waterItems: [],
+              electricityItems: []
+            });
+          } catch (err) {
+            console.error('Error populating database:', err);
+          }
+        });
+        
+        await db.open();
+        console.log('Database opened successfully');
+        
+        // Ensure we have a fixed costs record for current month
+        await getOrCreateMonthlyFixedCosts();
+        
+        return true;
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        return false;
+      }
+    }
+    
+    // Get or create monthly fixed costs
+    async function getOrCreateMonthlyFixedCosts() {
+      const yearMonth = new Date().toISOString().slice(0, 7);
+      
+      try {
+        let fixedCosts = await db.fixedCosts.where('date').equals(yearMonth).first();
+        
+        if (!fixedCosts) {
+          const lastFixedCosts = await db.fixedCosts.orderBy('date').last() || {
+            waterItems: [],
+            electricityItems: []
+          };
+          
+          const newId = await db.fixedCosts.add({
+            date: yearMonth,
+            waterItems: lastFixedCosts.waterItems || [],
+            electricityItems: lastFixedCosts.electricityItems || []
+          });
+          
+          fixedCosts = await db.fixedCosts.get(newId);
+        }
+        
+        return fixedCosts;
+      } catch (error) {
+        console.error('Error in getOrCreateMonthlyFixedCosts:', error);
+        return { date: yearMonth, waterItems: [], electricityItems: [] };
+      }
+    }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', registerServiceWorker);
+    async function loadFixedCosts() {
+      const fixedCosts = await getOrCreateMonthlyFixedCosts();
+      const waterItemsDiv = document.getElementById('waterFixedItems');
+      const electricityItemsDiv = document.getElementById('electricityFixedItems');
+      const status = document.getElementById('fixedCostsStatus');
+
+      waterItemsDiv.innerHTML = '';
+      electricityItemsDiv.innerHTML = '';
+      
+      const currentMonth = new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' });
+      document.getElementById('currentMonthDisplay').textContent = `Costos Fijos - ${currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1)}`;
+
+      const loadItems = (items, containerId, type) => {
+        if (items && items.length) {
+          items.forEach((item, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'flex justify-between items-center';
+            itemDiv.innerHTML = `<span>${item.name}: $${item.amount.toFixed(2)}</span>
+              <button class="text-red-600 hover:text-red-800" onclick="deleteFixedCost('${type}', ${index})">Eliminar</button>`;
+            document.getElementById(containerId).appendChild(itemDiv);
+          });
+        }
+      };
+
+      loadItems(fixedCosts.waterItems, 'waterFixedItems', 'water');
+      loadItems(fixedCosts.electricityItems, 'electricityFixedItems', 'electricity');
+
+      const hasItems = (fixedCosts.waterItems.length > 0 || fixedCosts.electricityItems.length > 0);
+      status.textContent = hasItems ? 'Ítems de costos fijos cargados. Añada o elimine según sea necesario.' : 'No hay ítems de costos fijos configurados. Ingrese y guarde los valores.';
+    }
+
+    async function deleteFixedCost(type, index) {
+      const yearMonth = new Date().toISOString().slice(0, 7);
+      const fixedCosts = await db.fixedCosts.where('date').equals(yearMonth).first();
+      if (!fixedCosts) return;
+      
+      if (type === 'water') {
+        fixedCosts.waterItems.splice(index, 1);
+      } else if (type === 'electricity') {
+        fixedCosts.electricityItems.splice(index, 1);
+      }
+      await db.fixedCosts.update(fixedCosts.id, { [`${type}Items`]: fixedCosts[`${type}Items`] });
+      await loadFixedCosts();
+    }
+    window.deleteFixedCost = deleteFixedCost;
+
+    async function addFixedCostItem(type) {
+      const nameInput = document.getElementById(`${type}ItemName`);
+      const amountInput = document.getElementById(`${type}ItemAmount`);
+      const addButton = document.getElementById(`add${type.charAt(0).toUpperCase() + type.slice(1)}ItemButton`);
+      const statusElement = document.getElementById('fixedCostsStatus');
+      
+      // Check if required elements exist
+      if (!nameInput || !amountInput || !addButton || !statusElement) {
+        console.error('Required elements not found');
+        return;
+      }
+      
+      const name = nameInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      const typeName = type === 'water' ? 'agua' : 'electricidad';
+      let statusMessage = '';
+
+      // Validate inputs
+      if (!name) {
+        statusElement.textContent = `Por favor ingrese un nombre para el ítem de ${typeName}.`;
+        statusElement.className = 'text-red-600 mt-2 text-sm';
+        nameInput.focus();
+        return;
+      }
+      
+      if (isNaN(amount) || amount <= 0) {
+        statusElement.textContent = `Por favor ingrese un monto válido (mayor a 0) para el ítem de ${typeName}.`;
+        statusElement.className = 'text-red-600 mt-2 text-sm';
+        amountInput.focus();
+        return;
+      }
+
+      try {
+        // Show loading state
+        const originalButtonText = addButton.innerHTML;
+        addButton.disabled = true;
+        addButton.innerHTML = '<span class="inline-block animate-spin mr-2">↻</span>Guardando...';
+        statusElement.textContent = 'Guardando...';
+        statusElement.className = 'text-blue-600 mt-2 text-sm';
+
+        // Get or create fixed costs for current month
+        const fixedCosts = await getOrCreateMonthlyFixedCosts();
+        if (!fixedCosts) {
+          throw new Error('No se pudo obtener o crear el registro de costos fijos');
+        }
+        
+        // Ensure items array exists
+        if (!Array.isArray(fixedCosts[`${type}Items`])) {
+          fixedCosts[`${type}Items`] = [];
+        }
+        
+        // Check for existing item with same name (case insensitive)
+        const items = fixedCosts[`${type}Items`];
+        const existingItemIndex = items.findIndex(item => 
+          item.name && item.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        // Update or add item
+        if (existingItemIndex >= 0) {
+          items[existingItemIndex].amount = amount;
+          statusMessage = `Ítem de ${typeName} actualizado exitosamente.`;
         } else {
-            registerServiceWorker();
+          items.push({ name, amount, isFixed: true });
+          statusMessage = `Ítem de ${typeName} agregado exitosamente.`;
+        }
+        
+        // Save to database
+        const updateData = { 
+          [`${type}Items`]: items,
+          date: fixedCosts.date || new Date().toISOString().slice(0, 7) // Ensure date is set
+        };
+        
+        await db.fixedCosts.update(fixedCosts.id, updateData);
+        
+        // Clear inputs and update UI
+        nameInput.value = '';
+        amountInput.value = '';
+        nameInput.focus();
+        
+        // Update UI
+        await loadFixedCosts();
+        
+        // Show success message
+        statusElement.textContent = statusMessage;
+        statusElement.className = 'text-green-600 mt-2 text-sm';
+        
+      } catch (error) {
+        console.error('Error adding fixed cost item:', error);
+        const errorMessage = error.message || 'Error desconocido';
+        console.error('Error details:', { type, name, amount, error: errorMessage });
+        statusElement.textContent = `Error al guardar el ítem: ${errorMessage}`;
+        statusElement.className = 'text-red-600 mt-2 text-sm';
+      } finally {
+        // Restore button state
+        if (addButton) {
+          addButton.disabled = false;
+          addButton.innerHTML = 'Añadir';
+        }
+      }
+    }
+
+    // Add event listeners for Enter key in input fields
+    function setupInputListeners(type) {
+      const nameInput = document.getElementById(`${type}ItemName`);
+      const amountInput = document.getElementById(`${type}ItemAmount`);
+      const addButton = document.getElementById(`add${type.charAt(0).toUpperCase() + type.slice(1)}ItemButton`);
+      
+      if (nameInput && amountInput) {
+        // Add click event to the add button
+        if (addButton) {
+          addButton.addEventListener('click', () => addFixedCostItem(type));
+        }
+        
+        // Handle Enter key in name input
+        nameInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            amountInput.focus();
+          }
+        });
+        
+        // Handle Enter key in amount input
+        amountInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addFixedCostItem(type);
+          }
+        });
+      }
+    }
+
+    function formatDate(date) {
+      return new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    }
+
+    async function updateSummaryCards(expenses) {
+      if (expenses.length === 0) {
+        return; // Keep the default empty state
+      }
+
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      
+      // Calculate totals
+      const totalExpense = expenses.reduce((sum, exp) => {
+        const water = parseFloat(exp.totalWaterBill || 0);
+        const electricity = parseFloat(exp.totalElectricityBill || 0);
+        return sum + water + electricity;
+      }, 0);
+      
+      // Calculate current month expenses
+      const currentMonthExpenses = expenses.filter(exp => {
+        const expDate = new Date(exp.date);
+        return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+      });
+      
+      const currentMonthTotal = currentMonthExpenses.reduce((sum, exp) => {
+        const water = parseFloat(exp.totalWaterBill || 0);
+        const electricity = parseFloat(exp.totalElectricityBill || 0);
+        return sum + water + electricity;
+      }, 0);
+      
+      // Calculate average of last 6 months
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const lastSixMonthsExpenses = expenses.filter(exp => {
+        const expDate = new Date(exp.date);
+        return expDate >= sixMonthsAgo;
+      });
+      
+      const monthlyAverages = {};
+      lastSixMonthsExpenses.forEach(exp => {
+        const expDate = new Date(exp.date);
+        const monthYear = `${expDate.getFullYear()}-${expDate.getMonth()}`;
+        const water = parseFloat(exp.totalWaterBill || 0);
+        const electricity = parseFloat(exp.totalElectricityBill || 0);
+        
+        if (!monthlyAverages[monthYear]) {
+          monthlyAverages[monthYear] = 0;
+        }
+        monthlyAverages[monthYear] += water + electricity;
+      });
+      
+      const avgExpense = Object.values(monthlyAverages).reduce((sum, val) => sum + val, 0) / 
+                        Math.max(Object.keys(monthlyAverages).length, 1);
+      
+      // Update the summary cards
+      const totalExpenseEl = document.getElementById('totalExpense');
+      const avgExpenseEl = document.getElementById('avgExpense');
+      const currentMonthExpenseEl = document.getElementById('currentMonthExpense');
+      
+      if (totalExpenseEl) totalExpenseEl.textContent = formatCurrency(totalExpense);
+      if (avgExpenseEl) avgExpenseEl.textContent = formatCurrency(avgExpense);
+      if (currentMonthExpenseEl) currentMonthExpenseEl.textContent = formatCurrency(currentMonthTotal);
+    }
+
+    // Charts have been removed as requested
+
+    async function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const exportButton = document.getElementById('exportPdf');
+      const originalButtonText = exportButton.innerHTML;
+
+      try {
+        exportButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generando PDF...`;
+        exportButton.disabled = true;
+
+        const latestExpense = await db.expenses.orderBy('date').last();
+        if (!latestExpense) {
+          alert("No hay registros de gastos para exportar.");
+          return;
         }
 
-        if (window.location.search.includes('update=1')) {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                    for (let registration of registrations) {
-                        registration.unregister();
-                    }
-                    console.log('Service Workers desregistrados. Recargando...');
-                    window.location.href = window.location.pathname;
-                });
-            }
+        const formattedDate = new Date(latestExpense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        const waterTotalBill = formatCurrency(latestExpense.totalWaterBill);
+        const electricityTotalBill = formatCurrency(latestExpense.totalElectricityBill);
+
+        const doc = new jsPDF();
+        let yPos = 20;
+
+        const generateReport = (doc, houseNumber, houseTotal, waterConsumption, electricityConsumption, waterDistribution, electricityDistribution, waterFixedItems, electricityFixedItems, isFirstPage = true) => {
+          if (!isFirstPage) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          doc.setFontSize(18);
+          doc.text(`Informe de Gastos - Casa ${houseNumber}`, 14, yPos);
+          yPos += 8;
+          doc.setFontSize(11);
+          doc.setTextColor(100);
+          doc.text(`Fecha del Reporte: ${formattedDate}`, 14, yPos);
+          yPos += 6;
+          doc.setFontSize(10);
+          doc.text(`Total de la factura de Agua: ${waterTotalBill}`, 14, yPos);
+          yPos += 6;
+          doc.text(`Total de la factura de Electricidad: ${electricityTotalBill}`, 14, yPos);
+          yPos += 15;
+
+          doc.setFontSize(12);
+          doc.setTextColor(0);
+          doc.text('Desglose de la Cuenta', 14, yPos);
+          yPos += 10;
+
+          // Water details
+          doc.text(`Agua (Consumo ${waterConsumption.toFixed(2)} m³):`, 14, yPos);
+          yPos += 7;
+          doc.text(` - Costos fijos (50% de ${waterFixedItems.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}): ${formatCurrency(waterDistribution.fixedPerHouse)}`, 20, yPos);
+          yPos += 7;
+          doc.text(` - Costo variable: ${formatCurrency(waterDistribution.proportional)}`, 20, yPos);
+          yPos += 7;
+          doc.text(` - Subtotal Agua: ${formatCurrency(waterDistribution.house1)}`, 20, yPos);
+          yPos += 12;
+
+          // Electricity details
+          doc.text(`Electricidad (Consumo ${electricityConsumption.toFixed(2)} kWh):`, 14, yPos);
+          yPos += 7;
+          doc.text(` - Costos fijos (50% de ${electricityFixedItems.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}): ${formatCurrency(electricityDistribution.fixedPerHouse)}`, 20, yPos);
+          yPos += 7;
+          doc.text(` - Costo variable: ${formatCurrency(electricityDistribution.proportional)}`, 20, yPos);
+          yPos += 7;
+          doc.text(` - Subtotal Electricidad: ${formatCurrency(electricityDistribution.house1)}`, 20, yPos);
+          yPos += 12;
+
+          // Fixed cost items list
+          doc.setFontSize(10);
+          doc.text('Detalle de Costos Fijos:', 14, yPos);
+          yPos += 7;
+          const waterFixedItemsList = waterFixedItems.map(item => `  - Agua: ${item.name} (${formatCurrency(item.amount)})`).join('\n');
+          const electricityFixedItemsList = electricityFixedItems.map(item => `  - Electricidad: ${item.name} (${formatCurrency(item.amount)})`).join('\n');
+          doc.text(waterFixedItemsList, 14, yPos);
+          yPos += (waterFixedItems.length * 7) + (waterFixedItems.length > 0 ? 5 : 0);
+          doc.text(electricityFixedItemsList, 14, yPos);
+          yPos += (electricityFixedItems.length * 7) + (electricityFixedItems.length > 0 ? 5 : 0);
+
+          // Total
+          doc.setFontSize(14);
+          doc.setTextColor(59, 130, 246);
+          doc.text(`TOTAL A PAGAR: ${formatCurrency(houseTotal)}`, 14, yPos + 10);
+        };
+        
+        generateReport(
+          doc, 1, latestExpense.house1Total, latestExpense.waterConsumption1, latestExpense.electricityConsumption1,
+          latestExpense.waterDistribution, latestExpense.electricityDistribution, latestExpense.waterFixedItems, latestExpense.electricityFixedItems, true
+        );
+        
+        generateReport(
+          doc, 2, latestExpense.house2Total, latestExpense.waterConsumption2, latestExpense.electricityConsumption2,
+          latestExpense.waterDistribution, latestExpense.electricityDistribution, latestExpense.waterFixedItems, latestExpense.electricityFixedItems, false
+        );
+        
+        doc.save(`gasto_total_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+      } catch (error) {
+        console.error('Error during PDF generation:', error);
+        alert('Ocurrió un error al generar el PDF. Por favor, intente de nuevo.');
+      } finally {
+        exportButton.innerHTML = originalButtonText;
+        exportButton.disabled = false;
+      }
+    }
+
+    async function loadHistory() {
+      if (isUpdating) return;
+      isUpdating = true;
+      
+      try {
+        const expensesList = document.getElementById('expensesList');
+        if (!expensesList) {
+          console.log('Expenses list not found in current view');
+          return;
         }
-    </script>
-    <script src="app.js"></script>
+        
+        // Show loading state
+        expensesList.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-6 py-8 text-center">
+              <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+              <p class="mt-2 text-sm text-gray-500">Cargando historial...</p>
+            </td>
+          </tr>`;
+        
+        const expenses = await db.expenses.orderBy('date').reverse().toArray();
+        
+        if (expenses.length === 0) {
+          expensesList.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-6 py-8 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No hay registros</h3>
+                <p class="mt-1 text-sm text-gray-500">Comienza agregando tu primer registro de gastos.</p>
+              </td>
+            </tr>`;
+          updateSummaryCards([]);
+          return;
+        }
+        
+        // Update summary cards
+        updateSummaryCards(expenses);
+        
+        // Update total count
+        document.getElementById('totalCount').textContent = expenses.length;
+        
+        // Show first 10 items
+        const itemsPerPage = 10;
+        const paginatedExpenses = expenses.slice(0, itemsPerPage);
+        
+        const rows = paginatedExpenses.map(expense => {
+          try {
+            const date = new Date(expense.date);
+            const formattedDate = date.toLocaleDateString('es-CL', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+            
+            const total = (expense.waterTotal || 0) + (expense.electricityTotal || 0);
+            const isPaid = expense.status === 'paid';
+            
+            // Format fixed costs for display
+            const waterFixedItems = expense.waterFixedItems || [];
+            const electricityFixedItems = expense.electricityFixedItems || [];
+            
+            const waterFixedItemsList = waterFixedItems.length > 0 
+              ? waterFixedItems.map(item => `${item.name} (${formatCurrency(item.amount)})`).join(', ')
+              : 'Sin ítems';
+              
+            const electricityFixedItemsList = electricityFixedItems.length > 0
+              ? electricityFixedItems.map(item => `${item.name} (${formatCurrency(item.amount)})`).join(', ')
+              : 'Sin ítems';
+            
+            return `
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                  <div class="font-medium">${formattedDate}</div>
+                  <div class="text-xs text-gray-500">${date.toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</div>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-900">
+                  <div class="font-medium">Servicios Básicos</div>
+                  <div class="text-xs text-gray-500">Agua y Electricidad</div>
+                </td>
+                <td class="px-4 py-3 text-sm text-right">
+                  <div class="font-medium">${formatCurrency(expense.house1Total || 0)}</div>
+                  <div class="text-xs text-gray-500">
+                    Agua: ${expense.water1.toLocaleString('es-CL')}m³
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    Luz: ${expense.electricity1.toLocaleString('es-CL')}kWh
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-right">
+                  <div class="font-medium">${formatCurrency(expense.house2Total || 0)}</div>
+                  <div class="text-xs text-gray-500">
+                    Agua: ${expense.water2.toLocaleString('es-CL')}m³
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    Luz: ${expense.electricity2.toLocaleString('es-CL')}kWh
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-sm font-medium text-right">
+                  ${formatCurrency(total)}
+                </td>
+                <td class="px-4 py-3">
+                  <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
+                    ${isPaid ? 'Pagado' : 'Pendiente'}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-sm font-medium text-right whitespace-nowrap">
+                  <button class="text-blue-600 hover:text-blue-900 mr-3">Ver</button>
+                  <button class="text-gray-600 hover:text-gray-900">
+                    <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+                    </svg>
+                  </button>
+                </td>
+              </tr>`;
+          } catch (error) {
+            console.error('Error processing expense:', expense, error);
+            return ''; // Skip this row if there's an error
+          }
+        }).join('');
+        
+        expensesList.innerHTML = rows;
+        
+        // Update showing count
+        const showingCount = document.getElementById('showingCount');
+        if (showingCount) {
+          showingCount.textContent = `1-${Math.min(paginatedExpenses.length, expenses.length)}`;
+        }
+        
+      } catch (error) {
+        console.error('Error loading history:', error);
+        const expensesList = document.getElementById('expensesList');
+        if (expensesList) {
+          expensesList.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-6 py-8 text-center">
+                <svg class="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Error al cargar el historial</h3>
+                <p class="mt-1 text-sm text-red-600">${error.message || 'Intenta recargar la página'}</p>
+                <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                  Recargar Página
+                </button>
+              </td>
+            </tr>`;
+        }
+      } finally {
+        isUpdating = false;
+      }
+    }
+
+    async function loadLastReadings() {
+      try {
+        const readings = await db.lastReadings.get(1);
+        if (readings) {
+          document.getElementById('prevWater1').value = readings.water1 || 0;
+          document.getElementById('prevWater2').value = readings.water2 || 0;
+          document.getElementById('prevElectricity1').value = readings.electricity1 || 0;
+          document.getElementById('prevElectricity2').value = readings.electricity2 || 0;
+        }
+      } catch (error) {
+        console.error('Error loading last readings:', error);
+      }
+    }
+    
+    // Distributes costs based on consumption and fixed items
+    function distributeCosts(consumption1, consumption2, totalBill, fixedItems = []) {
+      const totalConsumption = consumption1 + consumption2;
+      
+      const fixedItemsTotal = fixedItems.reduce((sum, item) => sum + item.amount, 0);
+      const proportionalAmount = Math.max(0, totalBill - fixedItemsTotal);
+      
+      const fixedPerHouse = fixedItemsTotal / 2;
+      
+      let proportional1 = 0;
+      let proportional2 = 0;
+      
+      if (totalConsumption > 0) {
+        proportional1 = (consumption1 / totalConsumption) * proportionalAmount;
+        proportional2 = (consumption2 / totalConsumption) * proportionalAmount;
+      } else if (proportionalAmount > 0) {
+        proportional1 = proportionalAmount / 2;
+        proportional2 = proportionalAmount / 2;
+      }
+
+      const house1Total = fixedPerHouse + proportional1;
+      const house2Total = fixedPerHouse + proportional2;
+      
+      return {
+        house1: house1Total,
+        house2: house2Total,
+        fixedPerHouse: fixedPerHouse,
+        proportional: proportionalAmount
+      };
+    }
+    
+    document.getElementById('saveButton').addEventListener('click', async () => {
+      const prevWater1 = parseFloat(document.getElementById('prevWater1').value) || 0;
+      const prevWater2 = parseFloat(document.getElementById('prevWater2').value) || 0;
+      const prevElectricity1 = parseFloat(document.getElementById('prevElectricity1').value) || 0;
+      const prevElectricity2 = parseFloat(document.getElementById('prevElectricity2').value) || 0;
+      
+      const water1 = parseFloat(document.getElementById('water1').value) || 0;
+      const water2 = parseFloat(document.getElementById('water2').value) || 0;
+      const electricity1 = parseFloat(document.getElementById('electricity1').value) || 0;
+      const electricity2 = parseFloat(document.getElementById('electricity2').value) || 0;
+      
+      if (water1 < prevWater1 || water2 < prevWater2) {
+        alert('Las lecturas actuales de agua no pueden ser menores a las lecturas anteriores.');
+        return;
+      }
+      if (electricity1 < prevElectricity1 || electricity2 < prevElectricity2) {
+        alert('Las lecturas actuales de electricidad no pueden ser menores a las lecturas anteriores.');
+        return;
+      }
+      
+      const waterConsumption1 = Math.max(0, water1 - prevWater1);
+      const waterConsumption2 = Math.max(0, water2 - prevWater2);
+      const electricityConsumption1 = Math.max(0, electricity1 - prevElectricity1);
+      const electricityConsumption2 = Math.max(0, electricity2 - prevElectricity2);
+      
+      const totalWaterBill = parseFloat(document.getElementById('totalWaterBill').value) || 0;
+      const totalElectricityBill = parseFloat(document.getElementById('totalElectricityBill').value) || 0;
+      
+      const fixedCosts = await getOrCreateMonthlyFixedCosts();
+      const fixedWaterTotal = fixedCosts.waterItems.reduce((sum, item) => sum + item.amount, 0) || 0;
+      const fixedElectricityTotal = fixedCosts.electricityItems.reduce((sum, item) => sum + item.amount, 0) || 0;
+
+      if (totalWaterBill > 0 && totalWaterBill < fixedWaterTotal) {
+        alert('La factura total de agua debe ser mayor o igual a los costos fijos de agua.');
+        return;
+      }
+      if (totalElectricityBill > 0 && totalElectricityBill < fixedElectricityTotal) {
+        alert('La factura total de electricidad debe ser mayor o igual a los costos fijos de electricidad.');
+        return;
+      }
+
+      const waterDistribution = distributeCosts(
+        waterConsumption1, waterConsumption2, totalWaterBill, fixedCosts.waterItems
+      );
+      const electricityDistribution = distributeCosts(
+        electricityConsumption1, electricityConsumption2, totalElectricityBill, fixedCosts.electricityItems
+      );
+      
+      const expense = {
+        date: new Date(),
+        prevWater1, water1, waterConsumption1, prevWater2, water2, waterConsumption2, totalWaterBill, waterFixedItems: fixedCosts.waterItems,
+        prevElectricity1, electricity1, electricityConsumption1, prevElectricity2, electricity2, electricityConsumption2, totalElectricityBill, electricityFixedItems: fixedCosts.electricityItems,
+        waterDistribution: { house1: waterDistribution.house1, house2: waterDistribution.house2, fixedPerHouse: waterDistribution.fixedPerHouse, proportional: totalWaterBill - fixedWaterTotal },
+        electricityDistribution: { house1: electricityDistribution.house1, house2: electricityDistribution.house2, fixedPerHouse: electricityDistribution.fixedPerHouse, proportional: totalElectricityBill - fixedElectricityTotal },
+        house1Total: waterDistribution.house1 + electricityDistribution.house1,
+        house2Total: waterDistribution.house2 + electricityDistribution.house2
+      };
+
+      await db.expenses.add(expense);
+      await db.lastReadings.put({
+        id: 1,
+        water1,
+        water2,
+        electricity1,
+        electricity2
+      });
+
+      document.getElementById('water1').value = '';
+      document.getElementById('water2').value = '';
+      document.getElementById('totalWaterBill').value = '';
+      document.getElementById('electricity1').value = '';
+      document.getElementById('electricity2').value = '';
+      document.getElementById('totalElectricityBill').value = '';
+
+      await Promise.all([
+        loadLastReadings(),
+        loadHistory()
+      ]);
+    });
+
+    document.getElementById('exportPdf').addEventListener('click', exportToPDF);
+
+    // Safe initialization function
+    async function initializeApp() {
+      try {
+        console.log('Initializing application...');
+        const dbInitialized = await initDatabase();
+        if (!dbInitialized) {
+          console.error('Failed to initialize database');
+          return;
+        }
+        
+        // Setup event listeners for add buttons
+        const addWaterButton = document.getElementById('addWaterItemButton');
+        const addElectricityButton = document.getElementById('addElectricityItemButton');
+        
+        if (addWaterButton) {
+          addWaterButton.addEventListener('click', () => addFixedCostItem('water'));
+        }
+        
+        if (addElectricityButton) {
+          addElectricityButton.addEventListener('click', () => addFixedCostItem('electricity'));
+        }
+        
+        // Setup input field listeners
+        setupInputListeners('water');
+        setupInputListeners('electricity');
+        
+        // Load data only if elements exist
+        const fixedCostsSection = document.querySelector('section:first-of-type');
+        const historySection = document.querySelector('section:last-of-type');
+        
+        if (fixedCostsSection) {
+          await loadFixedCosts();
+          await loadLastReadings();
+          
+          // Set current month display
+          const currentMonth = new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' });
+          const monthDisplay = document.getElementById('currentMonthDisplay');
+          if (monthDisplay) {
+            monthDisplay.textContent = `Costos Fijos - ${currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1)}`;
+          }
+        }
+        
+        if (historySection) {
+          await loadHistory();
+          
+          // Set up PDF export if button exists
+          const exportButton = document.getElementById('exportPdf');
+          if (exportButton) {
+            exportButton.addEventListener('click', exportToPDF);
+          }
+        }
+        
+        console.log('Application initialized successfully');
+      } catch (error) {
+        console.error('Error during initialization:', error);
+      } finally {
+        isUpdating = false;
+      }
+    }
+    
+    // Start the application when DOM is loaded
+    document.addEventListener('DOMContentLoaded', initializeApp);
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          })
+          .catch(error => {
+            console.error('ServiceWorker registration failed: ', error);
+          });
+      });
+    }
+
+    // PWA Installation
+    let deferredPrompt;
+    const installButton = document.getElementById('installButton');
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+      // Show the install button
+      installButton.classList.remove('hidden');
+      
+      installButton.addEventListener('click', () => {
+        // Hide the install button
+        installButton.classList.add('hidden');
+        // Show the install prompt
+        deferredPrompt.prompt();
+        // Wait for the user to respond to the prompt
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+          } else {
+            console.log('User dismissed the install prompt');
+          }
+          deferredPrompt = null;
+        });
+      });
+    });
+
+    // Track successful installation
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('App was installed.');
+      installButton.classList.add('hidden');
+    });
+  </script>
 </body>
 </html>

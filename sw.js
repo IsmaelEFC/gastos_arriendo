@@ -1,104 +1,120 @@
-const CACHE_VERSION = 'v3';
-const CACHE_NAME = `el-campeon-${CACHE_VERSION}`;
+const CACHE_NAME = 'gastos-arriendo-v2';
+const ASSETS_TO_CACHE = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  'https://cdn.jsdelivr.net/npm/dexie@latest/dist/dexie.min.js',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+];
 
-// Archivos esenciales que deben estar en caché inmediatamente
-const urlsToCache = [
-    './',
-    './index.html',
-    './style.css',
-    './app.js',
-    './manifest.json',
-    './productos.json',
-    './icons/icon-192.png',
-    './icons/icon-512.png'
-].map(url => new URL(url, self.location).href); // Asegurar URLs absolutas
-
+// Install event - cache all static assets
 self.addEventListener('install', event => {
-    // Saltar la fase de espera e instalar inmediatamente
-    self.skipWaiting();
-    
-    // Pre-cache de recursos esenciales
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log(`[Service Worker] Abriendo caché: ${CACHE_NAME}`);
-                return cache.addAll(urlsToCache)
-                    .then(() => {
-                        console.log('[Service Worker] Recursos cacheados exitosamente');
-                    })
-                    .catch(error => {
-                        console.error('[Service Worker] Error al guardar en caché:', error);
-                        throw error;
-                    });
-            })
-    );
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Caching app shell');
+        return cache.addAll(ASSETS_TO_CACHE);
+      })
+  );
 });
 
+// Activate event - clean up old caches
 self.addEventListener('activate', event => {
-    // Tomar el control inmediatamente
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cache => {
-                    // Eliminar caches antiguas que no coincidan con la versión actual
-                    if (cache !== CACHE_NAME && cache.startsWith('el-campeon-')) {
-                        console.log('[Service Worker] Eliminando caché antigua:', cache);
-                        return caches.delete(cache);
-                    }
-                })
-            ).then(() => {
-                console.log('[Service Worker] Activado y listo para controlar clientes');
-                return self.clients.claim();
-            });
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+  console.log('Service Worker activated');
+});
+
+// Fetch event - serve from cache, falling back to network
+self.addEventListener('fetch', event => {
+  // Skip non-GET requests and chrome-extension requests
+  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+  
+  // Skip non-http(s) requests
+  if (!(event.request.url.startsWith('http') || event.request.url.startsWith('https'))) {
+    return;
+  }
+
+  // Handle API requests differently
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Don't cache API responses, just pass them through
+          return response;
+        })
+        .catch(() => {
+          // If network fails and there's a cached response, use it
+          return caches.match(event.request);
         })
     );
+    return;
+  }
+
+  // For all other requests, try cache first, then network
+  event.respondWith(
+    caches.match(event.request)
+      .then(cachedResponse => {
+        // Return cached response if found and not expired
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // Clone the request
+        const fetchRequest = event.request.clone();
+
+        // Make network request
+        return fetch(fetchRequest)
+          .then(response => {
+            // Check if we received a valid response
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            // Clone the response
+            const responseToCache = response.clone();
+
+            // Cache the response for future use
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+
+            return response;
+          })
+          .catch(error => {
+            console.error('Fetch failed; returning offline page', error);
+            // If all else fails, return the offline page
+            return caches.match('./offline.html');
+          });
+      })
+  );
 });
 
-self.addEventListener('fetch', event => {
-    const request = event.request;
-    const url = new URL(request.url);
-    
-    // Ignorar solicitudes que no son GET o que son de otro origen
-    if (request.method !== 'GET' || !url.origin.startsWith(self.location.origin)) {
-        return;
-    }
-
-    // Estrategia: Cache First, con actualización en segundo plano
-    event.respondWith(
-        caches.match(request)
-            .then(cachedResponse => {
-                // Para peticiones de navegación, siempre intenta la red primero
-                const fetchPromise = fetch(request).then(response => {
-                    // Si es una respuesta válida, actualiza la caché
-                    if (response && (response.status === 200 || response.status === 0)) {
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME).then(cache => {
-                            cache.put(request, responseToCache);
-                        });
-                    }
-                    return response;
-                }).catch(() => {
-                    // Si falla la red y no hay respuesta en caché, mostrar página offline
-                    if (request.mode === 'navigate') {
-                        return caches.match('./index.html');
-                    }
-                    return new Response('Sin conexión', { status: 503, statusText: 'Sin conexión' });
-                });
-
-                // Para navegación, intenta la red primero, luego caché
-                if (request.mode === 'navigate') {
-                    return fetchPromise.catch(() => caches.match('./index.html'));
-                }
-                
-                // Para otros recursos, devuelve caché primero, luego red
-                return cachedResponse || fetchPromise;
-            })
-    );
-});
-
-// Escuchar mensajes para actualizaciones
+// Listen for messages from the main thread
 self.addEventListener('message', event => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+  if (event.data && event.data.type === 'CACHE_URLS') {
+    event.waitUntil(
+      caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(event.data.payload))
+    );
+  }
 });
