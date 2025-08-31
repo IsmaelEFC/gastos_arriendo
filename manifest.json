@@ -1,0 +1,24 @@
+{
+  "name": "Control de Gastos de Arriendo",
+  "short_name": "Gastos Arriendo",
+  "description": "Aplicación para gestionar gastos de agua, electricidad y costos fijos de dos casas en arriendo",
+  "start_url": "/gastos_arriendo/",
+  "scope": "/gastos_arriendo/",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#1f2937",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
