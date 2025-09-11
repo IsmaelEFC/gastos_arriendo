@@ -28,92 +28,43 @@
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
           },
+          colors: {
+            primary: {
+              DEFAULT: '#4f46e5',
+              hover: '#4338ca',
+            },
+            secondary: '#6b7280',
+            success: '#10b981',
+            danger: '#ef4444',
+            warning: '#f59e0b',
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          },
         },
       },
     }
   </script>
   <style>
-    :root {
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --secondary: #6b7280;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --light-bg: #f9fafb;
-      --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-      --card-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f3f4f6;
-      color: #1f2937;
-    }
-
-    .card {
-      background: white;
-      border-radius: 0.75rem;
-      box-shadow: var(--card-shadow);
-      transition: all 0.3s ease;
-    }
-
-    .card:hover {
-      box-shadow: var(--card-hover);
-      transform: translateY(-2px);
-    }
-
-    .btn-primary {
-      background-color: var(--primary);
-      color: white;
-      font-weight: 500;
-      padding: 0.5rem 1.25rem;
-      border-radius: 0.5rem;
-      transition: all 0.2s;
-    }
-
-    .btn-primary:hover {
-      background-color: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-danger {
-      background-color: var(--danger);
-      color: white;
-    }
-
-    .btn-danger:hover {
-      background-color: #dc2626;
-    }
-
-    .input-field {
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      transition: all 0.2s;
-    }
-
-    .input-field:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-      outline: none;
-    }
-
+    /* Custom styles */
     .status-badge {
+      display: inline-flex;
+      align-items: center;
       padding: 0.25rem 0.5rem;
       border-radius: 0.25rem;
       font-size: 0.75rem;
       font-weight: 500;
     }
-
-    .status-paid {
-      background-color: #dcfce7;
-      color: #166534;
-    }
-
+    
     .status-pending {
       background-color: #fef3c7;
       color: #92400e;
+    }
+    
+    .status-paid {
+      background-color: #d1fae5;
+      color: #065f46;
     }
 
     .table-container {
@@ -475,9 +426,33 @@
         if (items && items.length) {
           items.forEach((item, index) => {
             const itemDiv = document.createElement('div');
-            itemDiv.className = 'flex justify-between items-center';
-            itemDiv.innerHTML = `<span>${item.name}: $${item.amount.toFixed(2)}</span>
-              <button class="text-red-600 hover:text-red-800" onclick="deleteFixedCost('${type}', ${index})">Eliminar</button>`;
+            itemDiv.className = 'flex justify-between items-center mb-2 p-2 bg-gray-50 rounded';
+            // Create elements manually to avoid HTML injection issues
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = `${item.name}: $${item.amount.toFixed(2)}`;
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'text-blue-600 hover:text-blue-800 text-sm';
+            editBtn.textContent = 'Editar';
+            editBtn.onclick = () => editFixedCostItem(type, index, item.name, item.amount);
+            
+            const separator = document.createElement('span');
+            separator.className = 'text-gray-300';
+            separator.textContent = ' | ';
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'text-red-600 hover:text-red-800 text-sm';
+            deleteBtn.textContent = 'Eliminar';
+            deleteBtn.onclick = () => deleteFixedCost(type, index);
+            
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'space-x-2';
+            buttonContainer.appendChild(editBtn);
+            buttonContainer.appendChild(separator);
+            buttonContainer.appendChild(deleteBtn);
+            
+            itemDiv.appendChild(nameSpan);
+            itemDiv.appendChild(buttonContainer);
             document.getElementById(containerId).appendChild(itemDiv);
           });
         }
@@ -504,6 +479,46 @@
       await loadFixedCosts();
     }
     window.deleteFixedCost = deleteFixedCost;
+
+    async function editFixedCostItem(type, index, currentName, currentAmount) {
+      const newName = prompt('Editar nombre del ítem:', currentName);
+      if (newName === null) return; // User cancelled
+      
+      const newAmount = parseFloat(prompt('Editar monto:', currentAmount));
+      if (isNaN(newAmount) || newAmount <= 0) {
+        alert('Por favor ingrese un monto válido mayor a 0');
+        return;
+      }
+
+      try {
+        const fixedCosts = await getOrCreateMonthlyFixedCosts();
+        if (!fixedCosts) return;
+        
+        const items = fixedCosts[`${type}Items`];
+        if (!items || !items[index]) return;
+
+        // Update the item
+        items[index] = { ...items[index], name: newName, amount: newAmount };
+        
+        // Save to database
+        await db.fixedCosts.update(fixedCosts.id, { 
+          [`${type}Items`]: items 
+        });
+        
+        // Refresh the display
+        await loadFixedCosts();
+        
+        // Show success message
+        const statusElement = document.getElementById('fixedCostsStatus');
+        statusElement.textContent = 'Ítem actualizado exitosamente.';
+        statusElement.className = 'text-green-600 mt-2 text-sm';
+        
+      } catch (error) {
+        console.error('Error updating fixed cost item:', error);
+        alert('Error al actualizar el ítem: ' + (error.message || 'Error desconocido'));
+      }
+    }
+    window.editFixedCostItem = editFixedCostItem;
 
     async function addFixedCostItem(type) {
       const nameInput = document.getElementById(`${type}ItemName`);
@@ -708,27 +723,21 @@
 
     // Charts have been removed as requested
 
-    async function exportToPDF() {
+    // Nombres de los arrendatarios (pueden ser personalizados)
+    const tenantNames = {
+      1: 'Casa 1 - Arrendatario 1',  // Reemplazar con el nombre real del arrendatario 1
+      2: 'Casa 2 - Arrendatario 2'   // Reemplazar con el nombre real del arrendatario 2
+    };
+
+    // Función para generar un PDF para una casa específica
+    async function generateHousePDF(houseNumber, latestExpense) {
       const { jsPDF } = window.jspdf;
-      const exportButton = document.getElementById('exportPdf');
-      const originalButtonText = exportButton.innerHTML;
+      const formattedDate = new Date(latestExpense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+      const waterTotalBill = formatCurrency(latestExpense.totalWaterBill);
+      const electricityTotalBill = formatCurrency(latestExpense.totalElectricityBill);
 
-      try {
-        exportButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generando PDF...`;
-        exportButton.disabled = true;
-
-        const latestExpense = await db.expenses.orderBy('date').last();
-        if (!latestExpense) {
-          alert("No hay registros de gastos para exportar.");
-          return;
-        }
-
-        const formattedDate = new Date(latestExpense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const waterTotalBill = formatCurrency(latestExpense.totalWaterBill);
-        const electricityTotalBill = formatCurrency(latestExpense.totalElectricityBill);
-
-        const doc = new jsPDF();
-        let yPos = 20;
+      const doc = new jsPDF();
+      let yPos = 20;
 
         const generateReport = (doc, houseNumber, houseTotal, waterConsumption, electricityConsumption, waterDistribution, electricityDistribution, waterFixedItems, electricityFixedItems, isFirstPage = true) => {
           if (!isFirstPage) {
@@ -736,47 +745,137 @@
             yPos = 20;
           }
           
-          doc.setFontSize(18);
-          doc.text(`Informe de Gastos - Casa ${houseNumber}`, 14, yPos);
+          // Título del informe con el nombre del arrendatario
+          doc.setFontSize(16);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'bold');
+          doc.text('INFORME DE GASTOS', 14, yPos);
           yPos += 8;
-          doc.setFontSize(11);
-          doc.setTextColor(100);
-          doc.text(`Fecha del Reporte: ${formattedDate}`, 14, yPos);
-          yPos += 6;
+          
+          // Nombre del arrendatario
+          doc.setFontSize(14);
+          doc.setTextColor(59, 130, 246);
+          doc.text(tenantNames[houseNumber], 14, yPos);
+          yPos += 10;
+          // Fecha y detalles del reporte
           doc.setFontSize(10);
-          doc.text(`Total de la factura de Agua: ${waterTotalBill}`, 14, yPos);
-          yPos += 6;
-          doc.text(`Total de la factura de Electricidad: ${electricityTotalBill}`, 14, yPos);
-          yPos += 15;
+          doc.setTextColor(100);
+          doc.setFont(undefined, 'normal');
+          doc.text(`Fecha del Reporte: ${formattedDate}`, 14, yPos);
+          yPos += 5;
+          
+          // Línea divisoria
+          doc.setDrawColor(200, 200, 200);
+          doc.line(14, yPos, 200, yPos);
+          yPos += 10;
+          // Totales de facturas
+          doc.setFontSize(10);
+          doc.text(`Total factura Agua: ${waterTotalBill}`, 14, yPos);
+          yPos += 5;
+          doc.text(`Total factura Electricidad: ${electricityTotalBill}`, 14, yPos);
+          yPos += 10;
 
+          // Sección de desglose
           doc.setFontSize(12);
-          doc.setTextColor(0);
-          doc.text('Desglose de la Cuenta', 14, yPos);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'bold');
+          doc.text('DETALLE DE CONSUMOS Y COSTOS', 14, yPos);
+          yPos += 8;
+          
+          // Línea divisoria más delgada
+          doc.setDrawColor(220, 220, 220);
+          doc.line(14, yPos, 200, yPos);
           yPos += 10;
 
           // Water details
-          doc.text(`Agua (Consumo ${waterConsumption.toFixed(2)} m³):`, 14, yPos);
+          const waterTotal = houseNumber === 1 ? waterDistribution.house1 : waterDistribution.house2;
+          const currentWater = houseNumber === 1 ? latestExpense.water1 : latestExpense.water2;
+          const prevWater = houseNumber === 1 ? latestExpense.prevWater1 : latestExpense.prevWater2;
+          const actualWaterConsumption = Math.max(0, currentWater - prevWater);
+          
+          // Título sección Agua
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'bold');
+          doc.text('AGUA', 14, yPos);
+          yPos += 6;
+          doc.setFont(undefined, 'normal');
+          doc.text(`• Consumo: ${actualWaterConsumption.toFixed(2)} m³`, 20, yPos);
+          yPos += 5;
+          doc.text(`• Lectura actual: ${currentWater.toFixed(2)} m³`, 20, yPos);
+          yPos += 5;
+          if (prevWater > 0) {
+            doc.text(`• Lectura anterior: ${prevWater.toFixed(2)} m³`, 20, yPos);
+            yPos += 5;
+          }
           yPos += 7;
-          doc.text(` - Costos fijos (50% de ${waterFixedItems.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}): ${formatCurrency(waterDistribution.fixedPerHouse)}`, 20, yPos);
+          // Detalles de costos con mejor formato
+          doc.setFont(undefined, 'bold');
+          doc.text('Costos:', 20, yPos);
+          yPos += 5;
+          doc.setFont(undefined, 'normal');
+          const totalFixedWater = waterFixedItems.reduce((sum, item) => sum + item.amount, 0);
+          doc.text(`• Fijos (50% de ${formatCurrency(totalFixedWater)}): ${formatCurrency(waterDistribution.fixedPerHouse)}`, 25, yPos);
           yPos += 7;
-          doc.text(` - Costo variable: ${formatCurrency(waterDistribution.proportional)}`, 20, yPos);
+          const waterVariable = houseNumber === 1 ? 
+            (waterDistribution.house1 - waterDistribution.fixedPerHouse) : 
+            (waterDistribution.house2 - waterDistribution.fixedPerHouse);
+          doc.text(`• Variables: ${formatCurrency(waterVariable)}`, 25, yPos);
           yPos += 7;
-          doc.text(` - Subtotal Agua: ${formatCurrency(waterDistribution.house1)}`, 20, yPos);
+          doc.setFont(undefined, 'bold');
+          doc.text(`Subtotal Agua: ${formatCurrency(waterTotal)}`, 20, yPos);
+          doc.setFont(undefined, 'normal');
           yPos += 12;
 
           // Electricity details
-          doc.text(`Electricidad (Consumo ${electricityConsumption.toFixed(2)} kWh):`, 14, yPos);
+          const electricityTotal = houseNumber === 1 ? electricityDistribution.house1 : electricityDistribution.house2;
+          const currentElectricity = houseNumber === 1 ? latestExpense.electricity1 : latestExpense.electricity2;
+          const prevElectricity = houseNumber === 1 ? latestExpense.prevElectricity1 : latestExpense.prevElectricity2;
+          const actualElectricityConsumption = Math.max(0, currentElectricity - prevElectricity);
+          
+          // Título sección Electricidad
+          yPos += 8;
+          doc.setFont(undefined, 'bold');
+          doc.text('ELECTRICIDAD', 14, yPos);
+          yPos += 6;
+          doc.setFont(undefined, 'normal');
+          doc.text(`• Consumo: ${actualElectricityConsumption.toFixed(2)} kWh`, 20, yPos);
+          yPos += 5;
+          doc.text(`• Lectura actual: ${currentElectricity.toFixed(2)} kWh`, 20, yPos);
+          yPos += 5;
+          if (prevElectricity > 0) {
+            doc.text(`• Lectura anterior: ${prevElectricity.toFixed(2)} kWh`, 20, yPos);
+            yPos += 5;
+          }
           yPos += 7;
-          doc.text(` - Costos fijos (50% de ${electricityFixedItems.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}): ${formatCurrency(electricityDistribution.fixedPerHouse)}`, 20, yPos);
+          // Detalles de costos con mejor formato
+          doc.setFont(undefined, 'bold');
+          doc.text('Costos:', 20, yPos);
+          yPos += 5;
+          doc.setFont(undefined, 'normal');
+          const totalFixedElectricity = electricityFixedItems.reduce((sum, item) => sum + item.amount, 0);
+          doc.text(`• Fijos (50% de ${formatCurrency(totalFixedElectricity)}): ${formatCurrency(electricityDistribution.fixedPerHouse)}`, 25, yPos);
           yPos += 7;
-          doc.text(` - Costo variable: ${formatCurrency(electricityDistribution.proportional)}`, 20, yPos);
+          const electricityVariable = houseNumber === 1 ? 
+            (electricityDistribution.house1 - electricityDistribution.fixedPerHouse) : 
+            (electricityDistribution.house2 - electricityDistribution.fixedPerHouse);
+          doc.text(`• Variables: ${formatCurrency(electricityVariable)}`, 25, yPos);
           yPos += 7;
-          doc.text(` - Subtotal Electricidad: ${formatCurrency(electricityDistribution.house1)}`, 20, yPos);
+          doc.setFont(undefined, 'bold');
+          doc.text(`Subtotal Electricidad: ${formatCurrency(electricityTotal)}`, 20, yPos);
+          doc.setFont(undefined, 'normal');
           yPos += 12;
 
-          // Fixed cost items list
+          // Sección de costos fijos
+          yPos += 10;
           doc.setFontSize(10);
-          doc.text('Detalle de Costos Fijos:', 14, yPos);
+          doc.setFont(undefined, 'bold');
+          doc.text('DETALLE DE COSTOS FIJOS', 14, yPos);
+          yPos += 8;
+          
+          // Línea divisoria más delgada
+          doc.setDrawColor(220, 220, 220);
+          doc.line(14, yPos, 200, yPos);
           yPos += 7;
           const waterFixedItemsList = waterFixedItems.map(item => `  - Agua: ${item.name} (${formatCurrency(item.amount)})`).join('\n');
           const electricityFixedItemsList = electricityFixedItems.map(item => `  - Electricidad: ${item.name} (${formatCurrency(item.amount)})`).join('\n');
@@ -785,27 +884,70 @@
           doc.text(electricityFixedItemsList, 14, yPos);
           yPos += (electricityFixedItems.length * 7) + (electricityFixedItems.length > 0 ? 5 : 0);
 
-          // Total
+          // Total con mejor formato
+          yPos += 10;
           doc.setFontSize(14);
-          doc.setTextColor(59, 130, 246);
-          doc.text(`TOTAL A PAGAR: ${formatCurrency(houseTotal)}`, 14, yPos + 10);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.setFillColor(59, 130, 246);
+          doc.rect(14, yPos, 190, 12, 'F');
+          doc.text(`TOTAL A PAGAR: ${formatCurrency(houseTotal)}`, 20, yPos + 8);
+          yPos += 15;
+          
+          // Pie de página
+          doc.setFontSize(8);
+          doc.setTextColor(100);
+          doc.setFont(undefined, 'italic');
+          doc.text('Documento generado automáticamente - ' + new Date().toLocaleString('es-CL'), 14, 290);
         };
         
+        // Generar el reporte para la casa específica
         generateReport(
-          doc, 1, latestExpense.house1Total, latestExpense.waterConsumption1, latestExpense.electricityConsumption1,
-          latestExpense.waterDistribution, latestExpense.electricityDistribution, latestExpense.waterFixedItems, latestExpense.electricityFixedItems, true
+          doc, 
+          houseNumber,
+          houseNumber === 1 ? latestExpense.house1Total : latestExpense.house2Total, 
+          houseNumber === 1 ? latestExpense.water1 : latestExpense.water2, 
+          houseNumber === 1 ? latestExpense.electricity1 : latestExpense.electricity2,
+          latestExpense.waterDistribution, 
+          latestExpense.electricityDistribution, 
+          latestExpense.waterFixedItems || [], 
+          latestExpense.electricityFixedItems || [], 
+          true
         );
         
-        generateReport(
-          doc, 2, latestExpense.house2Total, latestExpense.waterConsumption2, latestExpense.electricityConsumption2,
-          latestExpense.waterDistribution, latestExpense.electricityDistribution, latestExpense.waterFixedItems, latestExpense.electricityFixedItems, false
-        );
+        // Guardar el PDF con un nombre descriptivo
+        const fileName = `gastos_${tenantNames[houseNumber].toLowerCase().replace(/\s+/g, '_')}_${formattedDate.replace(/\s+/g, '_')}.pdf`;
+        doc.save(fileName);
         
-        doc.save(`gasto_total_${new Date().toISOString().split('T')[0]}.pdf`);
+        return fileName;
+    }
+
+    // Función principal para exportar PDFs
+    async function exportToPDF() {
+      const exportButton = document.getElementById('exportPdf');
+      const originalButtonText = exportButton.innerHTML;
+
+      try {
+        exportButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generando PDFs...`;
+        exportButton.disabled = true;
+
+        const latestExpense = await db.expenses.orderBy('date').last();
+        if (!latestExpense) {
+          alert("No hay registros de gastos para exportar.");
+          return;
+        }
+
+        // Generar PDF para cada casa
+        const files = [];
+        files.push(await generateHousePDF(1, latestExpense));
+        files.push(await generateHousePDF(2, latestExpense));
+        
+        // Mostrar mensaje de éxito con los archivos generados
+        alert(`Se han generado los siguientes archivos:\n- ${files.join('\n- ')}`);
         
       } catch (error) {
-        console.error('Error during PDF generation:', error);
-        alert('Ocurrió un error al generar el PDF. Por favor, intente de nuevo.');
+        console.error('Error generating PDF:', error);
+        alert('Error al generar los PDFs: ' + error.message);
       } finally {
         exportButton.innerHTML = originalButtonText;
         exportButton.disabled = false;
@@ -813,15 +955,32 @@
     }
 
     async function loadHistory() {
-      if (isUpdating) return;
+      if (isUpdating) {
+        console.log('Update already in progress');
+        return;
+      }
+      
       isUpdating = true;
+      console.log('Loading history...');
       
       try {
         const expensesList = document.getElementById('expensesList');
         if (!expensesList) {
-          console.log('Expenses list not found in current view');
+          console.error('Expenses list element not found in the DOM');
+          isUpdating = false;
           return;
         }
+        
+        // Clear previous content and show loading state
+        expensesList.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-6 py-8 text-center">
+              <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+              <p class="mt-2 text-sm text-gray-500">Cargando historial...</p>
+            </td>
+          </tr>`;
         
         // Show loading state
         expensesList.innerHTML = `
@@ -834,117 +993,186 @@
             </td>
           </tr>`;
         
-        const expenses = await db.expenses.orderBy('date').reverse().toArray();
+        console.log('Fetching expenses from database...');
+        let expenses = [];
+        try {
+          // Verificar que la tabla de gastos existe
+          const tableNames = await db.tables.map(table => table.name);
+          console.log('Tablas disponibles en la base de datos:', tableNames);
+          
+          if (!tableNames.includes('expenses')) {
+            console.log('La tabla expenses no existe, se creará con el primer registro');
+            expenses = [];
+          } else {
+            expenses = await db.expenses.orderBy('date').reverse().toArray();
+            console.log(`Found ${expenses.length} expenses in database`, expenses);
+          }
+        } catch (dbError) {
+          console.error('Error fetching expenses from database:', dbError);
+          expensesList.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-6 py-8 text-center text-red-600">
+                Error al cargar el historial: ${dbError.message}
+              </td>
+            </tr>`;
+          isUpdating = false;
+          return;
+        }
         
-        if (expenses.length === 0) {
+        if (!expenses || expenses.length === 0) {
+          console.log('No se encontraron gastos en la base de datos');
           expensesList.innerHTML = `
             <tr>
               <td colspan="7" class="px-6 py-8 text-center">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <h3 class="mt-2 text-sm font-medium text-gray-900">No hay registros</h3>
                 <p class="mt-1 text-sm text-gray-500">Comienza agregando tu primer registro de gastos.</p>
               </td>
             </tr>`;
-          updateSummaryCards([]);
-          return;
-        }
-        
-        // Update summary cards
-        updateSummaryCards(expenses);
-        
-        // Update total count
-        document.getElementById('totalCount').textContent = expenses.length;
-        
-        // Show first 10 items
-        const itemsPerPage = 10;
-        const paginatedExpenses = expenses.slice(0, itemsPerPage);
-        
-        const rows = paginatedExpenses.map(expense => {
-          try {
-            const date = new Date(expense.date);
-            const formattedDate = date.toLocaleDateString('es-CL', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
+        } else {
+          // Update summary cards
+          updateSummaryCards(expenses);
+          
+          // Update total count
+          document.getElementById('totalCount').textContent = expenses.length;
+          
+          // Show first 10 items
+          const itemsPerPage = 10;
+          const paginatedExpenses = expenses.slice(0, itemsPerPage);
+          
+          console.log('Rendering expenses table...');
+          const rows = paginatedExpenses.map(expense => {
+            try {
+              const date = new Date(expense.date);
+              const formattedDate = date.toLocaleDateString('es-CL', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              });
+              
+              // Obtener lecturas actuales y anteriores
+              const currentWater1 = expense.water1 || 0;
+              const currentWater2 = expense.water2 || 0;
+              const currentElectricity1 = expense.electricity1 || 0;
+              const currentElectricity2 = expense.electricity2 || 0;
+              
+              // Calcular consumos reales (diferencia con lecturas anteriores)
+              const prevWater1 = expense.prevWater1 || 0;
+              const prevWater2 = expense.prevWater2 || 0;
+              const prevElectricity1 = expense.prevElectricity1 || 0;
+              const prevElectricity2 = expense.prevElectricity2 || 0;
+              
+              const water1 = Math.max(0, currentWater1 - prevWater1);
+              const water2 = Math.max(0, currentWater2 - prevWater2);
+              const electricity1 = Math.max(0, currentElectricity1 - prevElectricity1);
+              const electricity2 = Math.max(0, currentElectricity2 - prevElectricity2);
+              
+              // Calcular totales por casa
+              const total1 = (expense.house1Total || 0);
+              const total2 = (expense.house2Total || 0);
+              const total = total1 + total2;
+              
+              const isPaid = expense.status === 'paid';
+              
+              return `
+                <tr class="hover:bg-gray-50 transition-colors">
+                  <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    <div class="font-medium">${formattedDate}</div>
+                    <div class="text-xs text-gray-500">${date.toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</div>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-900">
+                    <div class="font-medium">Servicios Básicos</div>
+                    <div class="text-xs text-gray-500">Agua y Electricidad</div>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="font-medium">${formatCurrency(total1)}</div>
+                    <div class="text-xs text-gray-500">
+                      <div>Consumo: ${water1.toLocaleString('es-CL')} m³</div>
+                      <div class="text-gray-400 text-xs">
+                        Lectura: ${currentWater1.toLocaleString('es-CL')} m³
+                        ${prevWater1 > 0 ? `(Anterior: ${prevWater1.toLocaleString('es-CL')} m³)` : ''}
+                      </div>
+                      <div>${formatCurrency(expense.waterCost1 || 0)}</div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                      <div>Consumo: ${electricity1.toLocaleString('es-CL')} kWh</div>
+                      <div class="text-gray-400 text-xs">
+                        Lectura: ${currentElectricity1.toLocaleString('es-CL')} kWh
+                        ${prevElectricity1 > 0 ? `(Anterior: ${prevElectricity1.toLocaleString('es-CL')} kWh)` : ''}
+                      </div>
+                      <div>${formatCurrency(expense.electricityCost1 || 0)}</div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="font-medium">${formatCurrency(total2)}</div>
+                    <div class="text-xs text-gray-500">
+                      <div>Consumo: ${water2.toLocaleString('es-CL')} m³</div>
+                      <div class="text-gray-400 text-xs">
+                        Lectura: ${currentWater2.toLocaleString('es-CL')} m³
+                        ${prevWater2 > 0 ? `(Anterior: ${prevWater2.toLocaleString('es-CL')} m³)` : ''}
+                      </div>
+                      <div>${formatCurrency(expense.waterCost2 || 0)}</div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                      <div>Consumo: ${electricity2.toLocaleString('es-CL')} kWh</div>
+                      <div class="text-gray-400 text-xs">
+                        Lectura: ${currentElectricity2.toLocaleString('es-CL')} kWh
+                        ${prevElectricity2 > 0 ? `(Anterior: ${prevElectricity2.toLocaleString('es-CL')} kWh)` : ''}
+                      </div>
+                      <div>${formatCurrency(expense.electricityCost2 || 0)}</div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-medium text-right">
+                    ${formatCurrency(total)}
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
+                      ${isPaid ? 'Pagado' : 'Pendiente'}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-medium text-right whitespace-nowrap">
+                    <button class="text-blue-600 hover:text-blue-900 mr-3">Ver</button>
+                    <button class="text-gray-600 hover:text-gray-900">
+                      <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>`;
+            } catch (error) {
+              console.error('Error processing expense:', expense, error);
+              return ''; // Skip this row if there's an error
+            }
+          }).join('');
+          
+          if (rows.length > 0) {
+            expensesList.innerHTML = rows;
+            
+            // Add event listeners for view buttons
+            document.querySelectorAll('.view-expense').forEach(button => {
+              button.addEventListener('click', () => {
+                // Handle view button click
+              });
             });
             
-            const total = (expense.waterTotal || 0) + (expense.electricityTotal || 0);
-            const isPaid = expense.status === 'paid';
-            
-            // Format fixed costs for display
-            const waterFixedItems = expense.waterFixedItems || [];
-            const electricityFixedItems = expense.electricityFixedItems || [];
-            
-            const waterFixedItemsList = waterFixedItems.length > 0 
-              ? waterFixedItems.map(item => `${item.name} (${formatCurrency(item.amount)})`).join(', ')
-              : 'Sin ítems';
-              
-            const electricityFixedItemsList = electricityFixedItems.length > 0
-              ? electricityFixedItems.map(item => `${item.name} (${formatCurrency(item.amount)})`).join(', ')
-              : 'Sin ítems';
-            
-            return `
-              <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                  <div class="font-medium">${formattedDate}</div>
-                  <div class="text-xs text-gray-500">${date.toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</div>
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-900">
-                  <div class="font-medium">Servicios Básicos</div>
-                  <div class="text-xs text-gray-500">Agua y Electricidad</div>
-                </td>
-                <td class="px-4 py-3 text-sm text-right">
-                  <div class="font-medium">${formatCurrency(expense.house1Total || 0)}</div>
-                  <div class="text-xs text-gray-500">
-                    Agua: ${expense.water1.toLocaleString('es-CL')}m³
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    Luz: ${expense.electricity1.toLocaleString('es-CL')}kWh
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-sm text-right">
-                  <div class="font-medium">${formatCurrency(expense.house2Total || 0)}</div>
-                  <div class="text-xs text-gray-500">
-                    Agua: ${expense.water2.toLocaleString('es-CL')}m³
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    Luz: ${expense.electricity2.toLocaleString('es-CL')}kWh
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-sm font-medium text-right">
-                  ${formatCurrency(total)}
-                </td>
-                <td class="px-4 py-3">
-                  <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
-                    ${isPaid ? 'Pagado' : 'Pendiente'}
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-sm font-medium text-right whitespace-nowrap">
-                  <button class="text-blue-600 hover:text-blue-900 mr-3">Ver</button>
-                  <button class="text-gray-600 hover:text-gray-900">
-                    <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
-                    </svg>
-                  </button>
+            // Update showing count
+            const showingCount = document.getElementById('showingCount');
+            if (showingCount) {
+              showingCount.textContent = `1-${Math.min(paginatedExpenses.length, expenses.length)}`;
+            }
+          } else {
+            expensesList.innerHTML = `
+              <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                  No hay datos para mostrar.
                 </td>
               </tr>`;
-          } catch (error) {
-            console.error('Error processing expense:', expense, error);
-            return ''; // Skip this row if there's an error
           }
-        }).join('');
-        
-        expensesList.innerHTML = rows;
-        
-        // Update showing count
-        const showingCount = document.getElementById('showingCount');
-        if (showingCount) {
-          showingCount.textContent = `1-${Math.min(paginatedExpenses.length, expenses.length)}`;
         }
-        
       } catch (error) {
+        console.error('Error in loadHistory:', error);
         console.error('Error loading history:', error);
         const expensesList = document.getElementById('expensesList');
         if (expensesList) {
@@ -1120,15 +1348,13 @@
         setupInputListeners('water');
         setupInputListeners('electricity');
         
-        // Load data only if elements exist
+        // Cargar costos fijos si el elemento existe
         const fixedCostsSection = document.querySelector('section:first-of-type');
-        const historySection = document.querySelector('section:last-of-type');
-        
         if (fixedCostsSection) {
           await loadFixedCosts();
           await loadLastReadings();
           
-          // Set current month display
+          // Mostrar el mes actual
           const currentMonth = new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' });
           const monthDisplay = document.getElementById('currentMonthDisplay');
           if (monthDisplay) {
@@ -1136,14 +1362,19 @@
           }
         }
         
-        if (historySection) {
+        // Cargar historial si el elemento existe
+        const expensesList = document.getElementById('expensesList');
+        if (expensesList) {
+          console.log('Cargando historial...');
           await loadHistory();
           
-          // Set up PDF export if button exists
+          // Configurar botón de exportar PDF si existe
           const exportButton = document.getElementById('exportPdf');
           if (exportButton) {
             exportButton.addEventListener('click', exportToPDF);
           }
+        } else {
+          console.log('No se encontró el elemento expensesList');
         }
         
         console.log('Application initialized successfully');

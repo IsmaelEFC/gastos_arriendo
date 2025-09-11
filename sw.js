@@ -1,10 +1,13 @@
-const CACHE_NAME = 'gastos-arriendo-v2';
+const CACHE_NAME = 'gastos-arriendo-v3';
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
+];
+
+const EXTERNAL_ASSETS = [
   'https://cdn.jsdelivr.net/npm/dexie@latest/dist/dexie.min.js',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
@@ -18,7 +21,11 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Caching app shell');
+        // Only cache local assets
         return cache.addAll(ASSETS_TO_CACHE);
+      })
+      .catch(error => {
+        console.error('Cache addAll failed:', error);
       })
   );
 });
@@ -45,8 +52,15 @@ self.addEventListener('activate', event => {
 // Fetch event - serve from cache, falling back to network
 self.addEventListener('fetch', event => {
   // Skip non-GET requests and chrome-extension requests
-  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
+  if (event.request.method !== 'GET' || 
+      event.request.url.startsWith('chrome-extension://') ||
+      event.request.url.includes('browser-sync')) {
     return;
+  }
+
+  // Skip external assets from being cached
+  if (EXTERNAL_ASSETS.some(url => event.request.url.startsWith(url))) {
+    return fetch(event.request);
   }
   
   // Skip non-http(s) requests
